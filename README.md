@@ -5,3 +5,5 @@ The player is based on **VLC**(https://www.videolan.org/vlc), so make sure VLC h
 Usage:
 
 `python play.py`
+
+![sample](/sample.png)
