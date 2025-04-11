@@ -1,4 +1,4 @@
-### Multiple Window Video Player
+# Multiple Window Video Player
 
 Two modes supported:
 
@@ -8,12 +8,12 @@ Two modes supported:
 
 The player is based on **VLC**(https://www.videolan.org/vlc), so make sure VLC has been installed before running this player program.
 
-Usage:
+**Usage**:
 
 `python play.py`
 
 
-Single video mode screeshot:
+Single video mode screenshot:
 
 ![single video mode](/assets/single.png)
 
