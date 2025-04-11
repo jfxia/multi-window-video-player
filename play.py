@@ -22,7 +22,7 @@ class VideoFrame(QFrame):
             super().mousePressEvent(event)
 
 
-# --- Multi Video中的独立视频播放控件 ---
+# --- Multi Video模式下的独立视频播放控件 ---
 class VideoPlayerWidget(QWidget):
     def __init__(self, vlc_instance):
         super().__init__()
@@ -302,8 +302,7 @@ class MultiVideoPlayer(QMainWindow):
             frame.setStyleSheet("background-color: black;")
             player = self.vlc_instance.media_player_new()
             self.players.append((player, frame))
-        # 若当前有已加载媒体，则重新设置媒体（简单示例，此处仅演示逻辑）
-        # 可根据需要扩展：例如保存上次播放位置等
+
 
     def create_multi_mode_windows(self):
         # 每个窗口为独立 VideoPlayerWidget（内置控件包括右键选文件、独立控制、音量等）
