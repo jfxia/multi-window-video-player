@@ -1,4 +1,4 @@
-### Multiple window player
+### Multiple Window Video Player
 
 Two modes supported:
 
