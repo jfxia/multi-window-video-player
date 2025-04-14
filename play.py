@@ -6,11 +6,80 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QSlider,
                              QFileDialog, QPushButton, QGridLayout, QFrame,
                              QComboBox, QVBoxLayout, QHBoxLayout, QLabel, QSizePolicy)
 from PyQt5.QtCore import Qt, QTimer, QSize, pyqtSignal
+from PyQt5.QtGui import QIcon, QFont
 
 # 设置 VLC 库路径（根据实际情况修改）
 vlc_path = r'C:\Program Files\VideoLAN\VLC'
 os.add_dll_directory(vlc_path)
 
+# 全局样式表
+STYLE_SHEET = """
+    QMainWindow {
+        background-color: #2d2d2d;
+    }
+    QWidget {
+        color: #e0e0e0;
+        background-color: #2d2d2d;
+    }
+    QFrame {
+        border: 1px solid #444;
+        border-radius: 3px;
+    }
+    QPushButton {
+        background-color: #3a3a3a;
+        border: 1px solid #444;
+        border-radius: 4px;
+        padding: 5px 10px;
+        min-width: 60px;
+    }
+    QPushButton:hover {
+        background-color: #4a4a4a;
+        border: 1px solid #555;
+    }
+    QPushButton:pressed {
+        background-color: #2a2a2a;
+    }
+    QComboBox {
+        background-color: #3a3a3a;
+        border: 1px solid #444;
+        border-radius: 4px;
+        padding: 3px;
+        min-width: 100px;
+    }
+    QComboBox:hover {
+        background-color: #4a4a4a;
+        border: 1px solid #555;
+    }
+    QComboBox::drop-down {
+        width: 20px;
+        border-left: 1px solid #444;
+    }
+    QComboBox QAbstractItemView {
+        background-color: #3a3a3a;
+        selection-background-color: #505050;
+    }
+    QLabel {
+        color: #e0e0e0;
+    }
+    QSlider::groove:horizontal {
+        border: 1px solid #444;
+        height: 8px;
+        background: #3a3a3a;
+        margin: 2px 0;
+        border-radius: 4px;
+    }
+    QSlider::handle:horizontal {
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #4a9cff, stop:1 #0078ff);
+        border: 1px solid #0078ff;
+        width: 18px;
+        margin: -2px 0;
+        border-radius: 9px;
+    }
+    QSlider::sub-page:horizontal {
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #4a9cff, stop:1 #0078ff);
+        border-radius: 4px;
+    }
+"""
 
 # --- 用于捕获右键点击的 QFrame 子类，用于Multi Video的视频显示区域 ---
 class VideoFrame(QFrame):
@@ -22,7 +91,7 @@ class VideoFrame(QFrame):
             super().mousePressEvent(event)
 
 
-# --- Multi Video模式下的独立视频播放控件 ---
+# --- Multi Video中的独立视频播放控件 ---
 class VideoPlayerWidget(QWidget):
     def __init__(self, vlc_instance):
         super().__init__()
@@ -33,77 +102,59 @@ class VideoPlayerWidget(QWidget):
         
     def init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(2, 2, 2, 2)
-        layout.setSpacing(2)
+        layout.setContentsMargins(0, 0, 0, 0)  # 减少边距
+        layout.setSpacing(4)
         
         # 视频显示区域（支持右键选文件）
         self.video_frame = VideoFrame()
-        self.video_frame.setStyleSheet("background-color: black;")
+        self.video_frame.setStyleSheet("background-color: black; border: 2px solid #444;")
         self.video_frame.setMinimumSize(200, 150)
-        layout.addWidget(self.video_frame)
+        
+        # 关键修改：设置尺寸策略使视频填充可用空间
+        self.video_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        layout.addWidget(self.video_frame, 1)  # 添加拉伸因子
         
         # 关联右键事件，触发独立文件选择
         self.video_frame.rightClicked.connect(self.open_file)
         
         # 播放控制条
         controls = QHBoxLayout()
+        controls.setContentsMargins(4, 0, 4, 4)  # 调整边距
+        controls.setSpacing(4)
+        
+        # 播放按钮 - 现在显示文字
         self.play_btn = QPushButton("Play")
+        self.play_btn.setToolTip("Play/Pause")
         self.play_btn.clicked.connect(self.toggle_play)
+        self.play_btn.setFixedHeight(30)
         controls.addWidget(self.play_btn)
         
+        # 停止按钮 - 现在显示文字
         self.stop_btn = QPushButton("Stop")
+        self.stop_btn.setToolTip("Stop")
         self.stop_btn.clicked.connect(self.stop)
+        self.stop_btn.setFixedHeight(30)
         controls.addWidget(self.stop_btn)
         
-        #进度条
+        # 进度条
         self.progress = QSlider(Qt.Horizontal)
         self.progress.setRange(0, 1000)
         self.progress.sliderPressed.connect(self.slider_pressed_event)
         self.progress.sliderReleased.connect(self.slider_released_event)
-        self.progress.setStyleSheet("""
-            QSlider::groove:horizontal {
-                border: 1px solid #999999;
-                height: 8px;
-                background: white;
-                margin: 2px 0;
-            }
-            QSlider::handle:horizontal {
-                background: #0099ff;
-                border: 1px solid #5c5c5c;
-                width: 18px;
-                margin: -2px 0;
-                border-radius: 5px;
-            }
-            QSlider::sub-page:horizontal {
-                background: #0099ff;
-            }
-        """)
-        controls.addWidget(self.progress)
+        controls.addWidget(self.progress, 1)  # 添加拉伸因子
         
         # 音量条
         self.volume = QSlider(Qt.Horizontal)
         self.volume.setRange(0, 100)
         self.volume.setValue(50)
         self.volume.valueChanged.connect(self.change_volume)
-        self.volume.setStyleSheet("""
-            QSlider::groove:horizontal {
-                border: 1px solid #999999;
-                height: 8px;
-                background: white;
-                margin: 2px 0;
-            }
-            QSlider::handle:horizontal {
-                background: #66cc99;
-                border: 1px solid #5c5c5c;
-                width: 18px;
-                margin: -2px 0;
-                border-radius: 5px;
-            }
-            QSlider::sub-page:horizontal {
-                background: #66cc99;
-            }
-        """)
+        self.volume.setFixedWidth(80)
         controls.addWidget(self.volume)
+        
+        # 音量图标
+        self.volume_icon = QLabel()
+        self.volume_icon.setPixmap(QIcon.fromTheme("audio-volume-medium").pixmap(16, 16))
+        controls.addWidget(self.volume_icon)
         
         layout.addLayout(controls)
         
@@ -131,12 +182,10 @@ class VideoPlayerWidget(QWidget):
         if self.player.is_playing():
             self.player.pause()
             self.play_btn.setText("Play")
-            self.play_btn.setStyleSheet("background-color: green; color: white")
             self.timer.stop()
         else:
             self.player.play()
             self.play_btn.setText("Pause")
-            self.play_btn.setStyleSheet("background-color: red; color: white")
             self.timer.start(100)
 
     def stop(self):
@@ -157,6 +206,15 @@ class VideoPlayerWidget(QWidget):
 
     def change_volume(self, value):
         self.player.audio_set_volume(value)
+        # 更新音量图标
+        if value == 0:
+            self.volume_icon.setPixmap(QIcon.fromTheme("audio-volume-muted").pixmap(16, 16))
+        elif value < 33:
+            self.volume_icon.setPixmap(QIcon.fromTheme("audio-volume-low").pixmap(16, 16))
+        elif value < 66:
+            self.volume_icon.setPixmap(QIcon.fromTheme("audio-volume-medium").pixmap(16, 16))
+        else:
+            self.volume_icon.setPixmap(QIcon.fromTheme("audio-volume-high").pixmap(16, 16))
 
     def update_ui(self):
         if not self.slider_pressed_flag:
@@ -170,7 +228,14 @@ class MultiVideoPlayer(QMainWindow):
         super().__init__()
         self.setWindowTitle("Multi-Window Video Player")
         self.setMinimumSize(QSize(800, 600))
+        self.setStyleSheet(STYLE_SHEET)
         self.vlc_instance = vlc.Instance()
+        
+        # 设置窗口图标
+        try:
+            self.setWindowIcon(QIcon.fromTheme("video-x-generic"))
+        except:
+            pass
         
         # 默认模式为Single Video
         self.current_mode = "Single Video"
@@ -189,33 +254,52 @@ class MultiVideoPlayer(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(8, 8, 8, 8)
+        main_layout.setSpacing(8)
 
         # 上方控制区域
         control_layout = QHBoxLayout()
+        control_layout.setContentsMargins(0, 0, 0, 0)
+        control_layout.setSpacing(10)
+        
         # 添加播放模式选择框
         self.mode_combo = QComboBox()
         self.mode_combo.addItems(["Single Video", "Multi Video"])
+        self.mode_combo.setCurrentIndex(0)
         self.mode_combo.currentIndexChanged.connect(self.mode_changed)
-        control_layout.addWidget(QLabel("Play Mode:"))
+        self.mode_label = QLabel("Play Mode:")
+        self.mode_label.setAlignment(Qt.AlignCenter)
+        control_layout.addWidget(self.mode_label)
         control_layout.addWidget(self.mode_combo)
         
         # 全局打开文件按钮（仅在Single Video下启用）
-        self.open_btn = QPushButton("Open file...")
+        self.open_btn = QPushButton("Open File...")
+        self.open_btn.setIcon(QIcon.fromTheme("document-open"))
         self.open_btn.clicked.connect(self.open_file)
         control_layout.addWidget(self.open_btn)
         
-        #全局播放按钮（仅在Single Video下启用）
+        # 全局播放按钮（现在显示文字）
         self.play_btn = QPushButton("Play")
+        self.play_btn.setToolTip("Play/Pause")
         self.play_btn.clicked.connect(self.toggle_play)
+        self.play_btn.setFixedHeight(30)
         control_layout.addWidget(self.play_btn)
         
+        # 全局停止按钮（现在显示文字）
+        self.stop_btn = QPushButton("Stop")
+        self.stop_btn.setToolTip("Stop")
+        self.stop_btn.clicked.connect(self.stop_all)
+        self.stop_btn.setFixedHeight(30)
+        control_layout.addWidget(self.stop_btn)
 
         # 窗口布局下拉框：选择显示窗口个数（对两种模式都适用）
         self.window_combo = QComboBox()
         self.window_combo.addItems(["1", "2", "4", "6", "8", "9"])
         self.window_combo.setCurrentText("4")
         self.window_combo.currentIndexChanged.connect(self.change_window_count)
-        control_layout.addWidget(QLabel("Window Layout:"))
+        self.layout_label = QLabel("Window Layout:")
+        self.layout_label.setAlignment(Qt.AlignCenter)
+        control_layout.addWidget(self.layout_label)
         control_layout.addWidget(self.window_combo)
         
         # 将上方控制区域加入主布局
@@ -223,7 +307,10 @@ class MultiVideoPlayer(QMainWindow):
 
         # 进度条（仅用于Single Video，全局进度）
         self.time_progress_layout = QHBoxLayout()
-        self.time_label = QLabel("00:00 / 00:00")
+        self.time_progress_layout.setContentsMargins(0, 0, 0, 0)
+        self.time_progress_layout.setSpacing(10)
+        
+        self.time_label = QLabel("00:00:00 / 00:00:00")
         self.time_label.setContentsMargins(0, 0, 0, 0)
         self.time_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.time_label.setStyleSheet("padding: 0px; margin: 0px; border: none;")
@@ -235,16 +322,23 @@ class MultiVideoPlayer(QMainWindow):
         self.progress.sliderPressed.connect(self.slider_pressed_event)
         self.progress.sliderReleased.connect(self.slider_released_event)
         self.progress.valueChanged.connect(self.seek_video)
-        self.time_progress_layout.addWidget(self.progress)
+        self.time_progress_layout.addWidget(self.progress, 1)
+        
         main_layout.addLayout(self.time_progress_layout)
 
         # 视频容器
         self.video_container = QWidget()
+        self.video_container.setStyleSheet("background-color: #1e1e1e; border: 1px solid #444; border-radius: 4px;")
         self.grid = QGridLayout()
-        self.grid.setSpacing(2)
+        self.grid.setSpacing(4)
+        self.grid.setContentsMargins(4, 4, 4, 4)
         self.video_container.setLayout(self.grid)
-        main_layout.addWidget(self.video_container)
+        main_layout.addWidget(self.video_container, 1)  # 添加拉伸因子
 
+        # 状态栏
+        self.status_bar = self.statusBar()
+        self.status_bar.showMessage("Ready")
+        
         # 根据默认模式创建窗口
         self.setup_video_windows()
 
@@ -254,9 +348,15 @@ class MultiVideoPlayer(QMainWindow):
         if self.current_mode == "Single Video":
             self.open_btn.setEnabled(True)
             self.time_progress_layout.setEnabled(True)
+            self.play_btn.setEnabled(True)
+            self.stop_btn.setEnabled(True)
+            self.status_bar.showMessage("Single Video mode - all windows play the same video")
         else:
             self.open_btn.setEnabled(False)
             self.time_progress_layout.setEnabled(False)
+            self.play_btn.setEnabled(False)
+            self.stop_btn.setEnabled(False)
+            self.status_bar.showMessage("Multi Video mode - each window can play independent videos (right-click to load)")
         # 清除现有窗口并重新创建
         self.clear_video_container()
         self.setup_video_windows()
@@ -266,6 +366,7 @@ class MultiVideoPlayer(QMainWindow):
         self.current_window_count = int(text)
         self.clear_video_container()
         self.setup_video_windows()
+        self.status_bar.showMessage(f"Changed to {self.current_window_count} window layout")
 
     def clear_video_container(self):
         # 停止并清理所有播放器
@@ -299,10 +400,9 @@ class MultiVideoPlayer(QMainWindow):
         for _ in range(self.current_window_count):
             frame = QFrame()
             frame.setFrameShape(QFrame.Box)
-            frame.setStyleSheet("background-color: black;")
+            frame.setStyleSheet("background-color: black; border: 2px solid #444;")
             player = self.vlc_instance.media_player_new()
             self.players.append((player, frame))
-
 
     def create_multi_mode_windows(self):
         # 每个窗口为独立 VideoPlayerWidget（内置控件包括右键选文件、独立控制、音量等）
@@ -354,8 +454,9 @@ class MultiVideoPlayer(QMainWindow):
         if path:
             self.load_video(path)
             self.toggle_play()  
+            self.status_bar.showMessage(f"Playing: {os.path.basename(path)}")
         else:
-            print("File not selected")
+            self.status_bar.showMessage("File not selected")
 
     def load_video(self, path):
         # 加载视频文件，并将同一媒体设置到所有播放器中
@@ -375,21 +476,30 @@ class MultiVideoPlayer(QMainWindow):
     def toggle_play(self):
         # 仅针对Single Video，全局控制所有播放器播放或暂停
         if not self.media_available():
+            self.status_bar.showMessage("No video loaded")
             return
 
         if self.is_playing():
             for player, _ in self.players:
                 player.pause()
-            self.play_btn.setText("Play")
-            self.play_btn.setStyleSheet("background-color: green; color: white")
-
+            self.play_btn.setIcon(QIcon.fromTheme("media-playback-start"))
             self.timer.stop()
         else:
             for player, _ in self.players:
                 player.play()
-            self.play_btn.setText("Pause")
-            self.play_btn.setStyleSheet("background-color: red; color: white")
+            self.play_btn.setIcon(QIcon.fromTheme("media-playback-pause"))
             self.timer.start(100)
+
+    def stop_all(self):
+        if self.current_mode == "Single Video":
+            for player, _ in self.players:
+                player.stop()
+            self.play_btn.setIcon(QIcon.fromTheme("media-playback-start"))
+            self.timer.stop()
+        else:
+            for widget in self.multi_widgets:
+                widget.stop()
+        self.status_bar.showMessage("Playback stopped")
 
     def is_playing(self):
         if self.players:
@@ -451,9 +561,16 @@ class MultiVideoPlayer(QMainWindow):
                 widget.player.release()
         event.accept()
 
-
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setStyle('Fusion')  # 使用Fusion风格，看起来更现代
+    
+    # 设置默认字体
+    font = QFont()
+    font.setFamily("Segoe UI")  # Windows
+    font.setPointSize(10)
+    app.setFont(font)
+    
     player = MultiVideoPlayer()
     player.show()
     sys.exit(app.exec_())
