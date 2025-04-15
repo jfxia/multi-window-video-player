@@ -490,11 +490,13 @@ class MultiVideoPlayer(QMainWindow):
             for player, _ in self.players:
                 player.pause()
             self.play_btn.setIcon(QIcon.fromTheme("media-playback-start"))
+            self.play_btn.setText("Play")
             self.timer.stop()
         else:
             for player, _ in self.players:
                 player.play()
             self.play_btn.setIcon(QIcon.fromTheme("media-playback-pause"))
+            self.play_btn.setText("Pause")
             self.timer.start(100)
 
     def stop_all(self):
