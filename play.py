@@ -161,7 +161,7 @@ class VideoPlayerWidget(QWidget):
         # 音量图标
         self.volume_icon = QLabel()
         self.volume_icon.setText("50%")
-        self.volume_icon.setStyleSheet("color: white;")
+        #self.volume_icon.setStyleSheet("color: white;padding: 0px; margin: 0px; border: none;")
         #self.volume_icon.setPixmap(QIcon.fromTheme("audio-volume-medium").pixmap(16, 16))
         controls.addWidget(self.volume_icon)
         
@@ -218,7 +218,7 @@ class VideoPlayerWidget(QWidget):
         volume = max(0, min(100, value))  # 确保音量在0-100范围内
         self.player.audio_set_volume(volume)
         self.volume_icon.setText(f"{volume}%")
-        self.volume_icon.setStyleSheet("color: white;")
+        self.volume_icon.setStyleSheet("background-color: #1e1e1e;color: white;padding: 0px; margin: 0px; border: none;")
 
     def update_ui(self):
         if not self.slider_pressed_flag:
@@ -414,6 +414,7 @@ class MultiVideoPlayer(QMainWindow):
         for _ in range(self.current_window_count):
             widget = VideoPlayerWidget(self.vlc_instance)
             widget.setStyleSheet(STYLE_SHEET)
+            widget.volume_icon.setStyleSheet("background-color: #1e1e1e;color: white;padding: 0px; margin: 0px; border: none;")
             self.multi_widgets.append(widget)
 
     def arrange_windows(self):
