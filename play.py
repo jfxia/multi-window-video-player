@@ -2,7 +2,7 @@ import sys
 import os
 import vlc
 import platform
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QSlider,
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QSlider,QMenu,
                              QFileDialog, QPushButton, QGridLayout, QFrame,
                              QComboBox, QVBoxLayout, QHBoxLayout, QLabel, QSizePolicy)
 from PyQt5.QtCore import Qt, QTimer, QSize, pyqtSignal
@@ -70,8 +70,8 @@ STYLE_SHEET = """
     }
     QSlider::handle:horizontal {
         background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #4a9cff, stop:1 #0078ff);
-        border: 1px solid #0078ff;
-        width: 18px;
+        border: 1px solid #222222;
+        width: 12px;
         margin: -2px 0;
         border-radius: 9px;
     }
@@ -83,21 +83,31 @@ STYLE_SHEET = """
 
 # --- 用于捕获右键点击的 QFrame 子类，用于Multi Video的视频显示区域 ---
 class VideoFrame(QFrame):
-    rightClicked = pyqtSignal()
-    def mousePressEvent(self, event):
-        if event.button() == Qt.RightButton:
-            self.rightClicked.emit()
-        else:
-            super().mousePressEvent(event)
-
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
+    
+    def show_context_menu(self, pos):
+        menu = QMenu(self)
+        open_action = menu.addAction("Open file...")
+        
+        parent_widget = self.parent()
+        if hasattr(parent_widget, 'open_file'):
+            open_action.triggered.connect(parent_widget.open_file)
+        
+        menu.exec_(self.mapToGlobal(pos))
 
 # --- Multi Video中的独立视频播放控件 ---
 class VideoPlayerWidget(QWidget):
+    request_open_file = pyqtSignal()
+
     def __init__(self, vlc_instance):
         super().__init__()
         self.vlc_instance = vlc_instance
         self.media = None
         self.player = self.vlc_instance.media_player_new()
+        self.player.audio_set_volume(50)  # 明确设置初始音量
         self.init_ui()
         
     def init_ui(self):
@@ -105,33 +115,29 @@ class VideoPlayerWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)  # 减少边距
         layout.setSpacing(4)
         
-        # 视频显示区域（支持右键选文件）
-        self.video_frame = VideoFrame()
+        # 视频显示区域
+        self.video_frame = VideoFrame(self)
         self.video_frame.setStyleSheet("background-color: black; border: 2px solid #444;")
         self.video_frame.setMinimumSize(200, 150)
-        
-        # 关键修改：设置尺寸策略使视频填充可用空间
         self.video_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        layout.addWidget(self.video_frame, 1)  # 添加拉伸因子
+        layout.addWidget(self.video_frame, 1)        
         
-        # 关联右键事件，触发独立文件选择
-        self.video_frame.rightClicked.connect(self.open_file)
         
         # 播放控制条
         controls = QHBoxLayout()
         controls.setContentsMargins(4, 0, 4, 4)  # 调整边距
         controls.setSpacing(4)
         
-        # 播放按钮 - 现在显示文字
+        # 播放按钮
         self.play_btn = QPushButton("Play")
-        self.play_btn.setToolTip("Play/Pause")
+        #self.play_btn.setToolTip("Play/Pause")
         self.play_btn.clicked.connect(self.toggle_play)
         self.play_btn.setFixedHeight(30)
         controls.addWidget(self.play_btn)
         
-        # 停止按钮 - 现在显示文字
+        # 停止按钮
         self.stop_btn = QPushButton("Stop")
-        self.stop_btn.setToolTip("Stop")
+        #self.stop_btn.setToolTip("Stop")
         self.stop_btn.clicked.connect(self.stop)
         self.stop_btn.setFixedHeight(30)
         controls.addWidget(self.stop_btn)
@@ -148,12 +154,16 @@ class VideoPlayerWidget(QWidget):
         self.volume.setRange(0, 100)
         self.volume.setValue(50)
         self.volume.valueChanged.connect(self.change_volume)
-        self.volume.setFixedWidth(80)
+        self.volume.setFixedWidth(100)
         controls.addWidget(self.volume)
-        
+       
+        self.player.audio_set_volume(50)
+
         # 音量图标
         self.volume_icon = QLabel()
-        self.volume_icon.setPixmap(QIcon.fromTheme("audio-volume-medium").pixmap(16, 16))
+        self.volume_icon.setText("50%")
+        self.volume_icon.setStyleSheet("color: white;")
+        #self.volume_icon.setPixmap(QIcon.fromTheme("audio-volume-medium").pixmap(16, 16))
         controls.addWidget(self.volume_icon)
         
         layout.addLayout(controls)
@@ -161,6 +171,7 @@ class VideoPlayerWidget(QWidget):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_ui)
         self.slider_pressed_flag = False
+
 
     def open_file(self):
         # 弹出文件对话框，选择视频文件
@@ -205,16 +216,10 @@ class VideoPlayerWidget(QWidget):
         self.player.set_position(pos)
 
     def change_volume(self, value):
-        self.player.audio_set_volume(value)
-        # 更新音量图标
-        if value == 0:
-            self.volume_icon.setPixmap(QIcon.fromTheme("audio-volume-muted").pixmap(16, 16))
-        elif value < 33:
-            self.volume_icon.setPixmap(QIcon.fromTheme("audio-volume-low").pixmap(16, 16))
-        elif value < 66:
-            self.volume_icon.setPixmap(QIcon.fromTheme("audio-volume-medium").pixmap(16, 16))
-        else:
-            self.volume_icon.setPixmap(QIcon.fromTheme("audio-volume-high").pixmap(16, 16))
+        volume = max(0, min(100, value))  # 确保音量在0-100范围内
+        self.player.audio_set_volume(volume)
+        self.volume_icon.setText(f"{volume}%")
+        self.volume_icon.setStyleSheet("color: white;")
 
     def update_ui(self):
         if not self.slider_pressed_flag:
@@ -278,14 +283,14 @@ class MultiVideoPlayer(QMainWindow):
         self.open_btn.clicked.connect(self.open_file)
         control_layout.addWidget(self.open_btn)
         
-        # 全局播放按钮（现在显示文字）
+        # 全局播放按钮
         self.play_btn = QPushButton("Play")
         self.play_btn.setToolTip("Play/Pause")
         self.play_btn.clicked.connect(self.toggle_play)
         self.play_btn.setFixedHeight(30)
         control_layout.addWidget(self.play_btn)
         
-        # 全局停止按钮（现在显示文字）
+        # 全局停止按钮
         self.stop_btn = QPushButton("Stop")
         self.stop_btn.setToolTip("Stop")
         self.stop_btn.clicked.connect(self.stop_all)
