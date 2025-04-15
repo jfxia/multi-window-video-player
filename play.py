@@ -372,24 +372,25 @@ class MultiVideoPlayer(QMainWindow):
         self.setup_video_windows()
         self.status_bar.showMessage(f"Changed to {self.current_window_count} window layout")
 
+    
     def clear_video_container(self):
-        # 停止并清理所有播放器
+        # 单视频模式下终止播放器
         if self.current_mode == "Single Video":
             for player, frame in self.players:
-                player.stop()
-                player.release()
-            self.players.clear()
-        else:
-            for widget in self.multi_widgets:
-                widget.player.stop()
-                widget.player.release()
-                widget.setParent(None)
-            self.multi_widgets.clear()
-        # 清空网格布局
+                if player.is_playing():
+                    player.stop()
+            self.players.clear() 
+        else: # 多视频模式
+            self.multi_widgets.clear() # Clear the list of widgets
+
+        # 清除网格布局中的部件
         while self.grid.count():
             child = self.grid.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+            widget = child.widget()
+            if widget is not None:
+                widget.setParent(None)
+                widget.deleteLater()
+
 
     def setup_video_windows(self):
         # 根据当前模式和窗口个数创建视频窗口
@@ -412,7 +413,7 @@ class MultiVideoPlayer(QMainWindow):
         # 每个窗口为独立 VideoPlayerWidget（内置控件包括右键选文件、独立控制、音量等）
         for _ in range(self.current_window_count):
             widget = VideoPlayerWidget(self.vlc_instance)
-            widget.setStyleSheet(STYLE_SHEET) #强制应用全局sytlesheet
+            widget.setStyleSheet(STYLE_SHEET)
             self.multi_widgets.append(widget)
 
     def arrange_windows(self):
@@ -568,7 +569,7 @@ class MultiVideoPlayer(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    app.setStyle('Fusion')  
+    app.setStyle('Fusion')  # 使用Fusion风格，看起来更现代
     
     # 设置默认字体
     font = QFont()
