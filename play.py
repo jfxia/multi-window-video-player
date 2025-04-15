@@ -33,8 +33,8 @@ STYLE_SHEET = """
         min-width: 60px;
     }
     QPushButton:hover {
-        background-color: #4a4a4a;
-        border: 1px solid #555;
+        background-color: #5a5a5a !important;
+        border: 1px solid #555 !important;
     }
     QPushButton:pressed {
         background-color: #2a2a2a;
@@ -100,7 +100,6 @@ class VideoFrame(QFrame):
 
 # --- Multi Video中的独立视频播放控件 ---
 class VideoPlayerWidget(QWidget):
-    request_open_file = pyqtSignal()
 
     def __init__(self, vlc_instance):
         super().__init__()
@@ -413,6 +412,7 @@ class MultiVideoPlayer(QMainWindow):
         # 每个窗口为独立 VideoPlayerWidget（内置控件包括右键选文件、独立控制、音量等）
         for _ in range(self.current_window_count):
             widget = VideoPlayerWidget(self.vlc_instance)
+            widget.setStyleSheet(STYLE_SHEET) #强制应用全局sytlesheet
             self.multi_widgets.append(widget)
 
     def arrange_windows(self):
@@ -568,7 +568,7 @@ class MultiVideoPlayer(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    app.setStyle('Fusion')  # 使用Fusion风格，看起来更现代
+    app.setStyle('Fusion')  
     
     # 设置默认字体
     font = QFont()
