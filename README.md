@@ -33,3 +33,7 @@ Single video mode screenshot:
 Multi video mode screenshot:
 
 ![multi video mode](/assets/multi.png)
+
+
+
+**WARNING**: VLC is such tough a memory monster that an instance of YLC may occupy 150MB memory.So, if you watch 4 or more video files at the same time, the player may not work as expected. 
