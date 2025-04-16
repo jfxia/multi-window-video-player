@@ -36,4 +36,4 @@ Multi video mode screenshot:
 
 
 
-**WARNING**: VLC is such tough a memory monster that an instance of YLC may occupy 150MB memory.So, if you watch 4 or more video files at the same time, the player may not work as expected. 
+**WARNING**: VLC is such tough a memory monster that an instance of VLC may occupy 150MB memory.So, if you watch 4 or more video files at the same time, the player may not work as expected. 
