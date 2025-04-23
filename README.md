@@ -12,11 +12,10 @@ The player program is on the basis of **VLC**(https://www.videolan.org/vlc) and 
 pip install PyQt5 vlc
 ```
 
-And change the **VLC path** value in the script to your own installation path if necessary.
+And change the **vlc_path** value in **play.conf** if necessary.
 
-```Python
-# set VLC path
-vlc_path = r'C:\Program Files\VideoLAN\VLC'
+```
+vlc_path = C:\Program Files\VideoLAN\VLC
 ```
 
 **Usage**:
