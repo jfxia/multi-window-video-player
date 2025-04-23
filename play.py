@@ -7,10 +7,11 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QSlider,QMenu,
                              QComboBox, QVBoxLayout, QHBoxLayout, QLabel, QSizePolicy)
 from PyQt5.QtCore import Qt, QTimer, QSize, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont
+import configparser
 
 # 设置 VLC 库路径（根据实际情况修改）
-vlc_path = r'C:\Program Files\VideoLAN\VLC'
-os.add_dll_directory(vlc_path)
+#vlc_path = r'C:\Program Files\VideoLAN\VLC'
+#os.add_dll_directory(vlc_path)
 
 # 全局样式表
 STYLE_SHEET = """
@@ -583,3 +584,15 @@ if __name__ == "__main__":
     player = MultiVideoPlayer()
     player.show()
     sys.exit(app.exec_())
+
+# 读取配置文件
+config = configparser.ConfigParser()
+config.read('play.conf')
+try:
+    vlc_path = config.get('DEFAULT', 'vlc_path')
+except (configparser.NoSectionError, configparser.NoOptionError):
+    print("未能从配置文件中读取 vlc_path，使用默认值或请检查配置文件。")
+    # 可以在这里设置默认值
+    vlc_path = r'C:\Program Files\VideoLAN\VLC'
+
+os.add_dll_directory(vlc_path)
