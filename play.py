@@ -61,6 +61,7 @@ class VideoPlayerWidget(QWidget):
         #self.play_btn.setToolTip("Play/Pause")
         self.play_btn.clicked.connect(self.toggle_play)
         self.play_btn.setFixedHeight(30)
+        self.play_btn.setMinimumWidth(60)  # 确保按钮有足够宽度
         controls.addWidget(self.play_btn)
         
         # 停止按钮
@@ -68,6 +69,7 @@ class VideoPlayerWidget(QWidget):
         #self.stop_btn.setToolTip("Stop")
         self.stop_btn.clicked.connect(self.stop)
         self.stop_btn.setFixedHeight(30)
+        self.stop_btn.setMinimumWidth(60)  # 确保按钮有足够宽度
         controls.addWidget(self.stop_btn)
         
         # 进度条
@@ -77,23 +79,48 @@ class VideoPlayerWidget(QWidget):
         self.progress.sliderReleased.connect(self.slider_released_event)
         controls.addWidget(self.progress, 1)  # 添加拉伸因子
         
+        # 倍速选择下拉菜单 - 使用固定宽度并设置尺寸策略
+        speed_container = QWidget()
+        speed_layout = QHBoxLayout(speed_container)
+        speed_layout.setContentsMargins(0, 0, 0, 0)
+        speed_layout.setSpacing(4)
+        
+        speed_label = QLabel("Speed:")
+        self.speed_combo = QComboBox()
+        self.speed_combo.addItems(["0.5", "0.75", "1.0", "1.25", "1.5", "1.75", "2.0"])
+        self.speed_combo.setCurrentText("1.0")
+        self.speed_combo.currentTextChanged.connect(self.change_speed)
+        self.speed_combo.setFixedWidth(40)  # 固定宽度
+        self.speed_combo.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)  # 固定尺寸策略
+        
+        speed_layout.addWidget(speed_label)
+        speed_layout.addWidget(self.speed_combo)
+        controls.addWidget(speed_container)
+        
         # 音量条
+        volume_container = QWidget()
+        volume_layout = QHBoxLayout(volume_container)
+        volume_layout.setContentsMargins(0, 0, 0, 0)
+        volume_layout.setSpacing(4)
+        
         self.volume = QSlider(Qt.Horizontal)
         self.volume.setRange(0, 100)
         self.volume.setValue(50)
         self.volume.valueChanged.connect(self.change_volume)
-        self.volume.setFixedWidth(100)
-        controls.addWidget(self.volume)
+        self.volume.setFixedWidth(100)  # 固定宽度
+        self.volume.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)  # 固定尺寸策略
+        
+        self.volume_icon = QLabel()
+        self.volume_icon.setText("50%")
+        self.volume_icon.setFixedWidth(40)  # 固定宽度
+        self.volume_icon.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)  # 固定尺寸策略
+        
+        volume_layout.addWidget(self.volume)
+        volume_layout.addWidget(self.volume_icon)
+        controls.addWidget(volume_container)
        
         self.player.audio_set_volume(50)
 
-        # 音量图标
-        self.volume_icon = QLabel()
-        self.volume_icon.setText("50%")
-        #self.volume_icon.setStyleSheet("color: white;padding: 0px; margin: 0px; border: none;")
-        #self.volume_icon.setPixmap(QIcon.fromTheme("audio-volume-medium").pixmap(16, 16))
-        controls.addWidget(self.volume_icon)
-        
         layout.addLayout(controls)
         
         self.timer = QTimer(self)
@@ -142,6 +169,11 @@ class VideoPlayerWidget(QWidget):
     def seek_video(self):
         pos = self.progress.value() / 1000.0
         self.player.set_position(pos)
+        
+    def change_speed(self, speed_text):
+        speed = float(speed_text)
+        self.player.set_rate(speed)
+        self.status_message = f"Playback speed set to {speed}x"
 
     def change_volume(self, value):
         volume = max(0, min(100, value))  # 确保音量在0-100范围内
@@ -216,6 +248,7 @@ class MultiVideoPlayer(QMainWindow):
         self.play_btn.setToolTip("Play/Pause")
         self.play_btn.clicked.connect(self.toggle_play)
         self.play_btn.setFixedHeight(30)
+        self.play_btn.setMinimumWidth(60)  # 确保按钮有足够宽度
         control_layout.addWidget(self.play_btn)
         
         # 全局停止按钮
@@ -223,7 +256,26 @@ class MultiVideoPlayer(QMainWindow):
         self.stop_btn.setToolTip("Stop")
         self.stop_btn.clicked.connect(self.stop_all)
         self.stop_btn.setFixedHeight(30)
+        self.stop_btn.setMinimumWidth(60)  # 确保按钮有足够宽度
         control_layout.addWidget(self.stop_btn)
+        
+        # 全局倍速选择（仅在Single Video模式下显示）
+        self.speed_container = QWidget()
+        speed_layout = QHBoxLayout(self.speed_container)
+        speed_layout.setContentsMargins(0, 0, 0, 0)
+        speed_layout.setSpacing(4)
+        
+        self.speed_label = QLabel("Speed:")
+        self.speed_combo = QComboBox()
+        self.speed_combo.addItems(["0.5", "0.75", "1.0", "1.25", "1.5", "1.75", "2.0"])
+        self.speed_combo.setCurrentText("1.0")
+        self.speed_combo.currentTextChanged.connect(self.change_global_speed)
+        self.speed_combo.setFixedWidth(40)  # 固定宽度
+        self.speed_combo.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)  # 固定尺寸策略
+        
+        speed_layout.addWidget(self.speed_label)
+        speed_layout.addWidget(self.speed_combo)
+        control_layout.addWidget(self.speed_container)
 
         # 窗口布局下拉框：选择显示窗口个数（对两种模式都适用）
         self.window_combo = QComboBox()
@@ -283,12 +335,14 @@ class MultiVideoPlayer(QMainWindow):
             self.time_progress_layout.setEnabled(True)
             self.play_btn.setEnabled(True)
             self.stop_btn.setEnabled(True)
+            self.speed_container.show()  # 显示整个倍速容器
             self.status_bar.showMessage("Single Video mode - all windows play the same video")
         else:
             self.open_btn.setEnabled(False)
             self.time_progress_layout.setEnabled(False)
             self.play_btn.setEnabled(False)
             self.stop_btn.setEnabled(False)
+            self.speed_container.hide()  # 隐藏整个倍速容器
             self.status_bar.showMessage("Multi Video mode - each window can play independent videos (right-click to load)")
         # 清除现有窗口并重新创建
         self.clear_video_container()
@@ -300,6 +354,12 @@ class MultiVideoPlayer(QMainWindow):
         self.clear_video_container()
         self.setup_video_windows()
         self.status_bar.showMessage(f"Changed to {self.current_window_count} window layout")
+
+    def change_global_speed(self, speed_text):
+        speed = float(speed_text)
+        for player, _ in self.players:
+            player.set_rate(speed)
+        self.status_bar.showMessage(f"Global playback speed set to {speed}x")
 
     
     def clear_video_container(self):
@@ -336,6 +396,8 @@ class MultiVideoPlayer(QMainWindow):
             frame.setFrameShape(QFrame.Box)
             frame.setStyleSheet("background-color: black; border: 2px solid #444;")
             player = self.vlc_instance.media_player_new()
+            # 设置初始倍速
+            player.set_rate(float(self.speed_combo.currentText()))
             self.players.append((player, frame))
 
     def create_multi_mode_windows(self):
@@ -519,7 +581,7 @@ config.read('play.conf')
 try:
     vlc_path = config.get('DEFAULT', 'vlc_path')
 except (configparser.NoSectionError, configparser.NoOptionError):
-    print("Failed to read vlc_path from play.conf.")
+    print("未能从配置文件中读取 vlc_path，使用默认值或请检查配置文件。")
     # 可以在这里设置默认值
     vlc_path = r'C:\Program Files\VideoLAN\VLC'
 
